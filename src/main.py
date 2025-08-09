@@ -10,13 +10,14 @@ if __name__ == '__main__':
     StudentDB.create_table()
     fh = JsonHandler(FILE_PATH / 'rooms.json')
     rooms = RoomDB.from_list(fh.read_file())
-    for room in rooms:
-        room.insert()
+    RoomDB.isert_many(rooms)
     fh = JsonHandler(FILE_PATH / 'students.json')
     students = StudentDB.from_list(fh.read_file())
-    for student in students:
-        student.insert()
-    RoomDB.get_student_num_list()
-    RoomDB.get_top_5_rooms_with_smallest_average_student_age()
-    RoomDB.get_top_5_rooms_with_largest_age_difference_among_students()
-    RoomDB.get_list_of_rooms_where_students_of_different_sexes_live_together()
+    StudentDB.isert_many(students)
+    for func in (
+        RoomDB.get_student_num_list,
+        RoomDB.get_top_5_rooms_with_smallest_average_student_age,
+        RoomDB.get_top_5_rooms_with_largest_age_difference_among_students,
+        RoomDB.get_list_of_rooms_with_different_sexes,
+    ):
+        print(func())

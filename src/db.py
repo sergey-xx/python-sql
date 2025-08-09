@@ -1,5 +1,6 @@
 from dataclasses import dataclass, fields
 from datetime import datetime
+from typing import Self
 
 import pymysql.cursors
 
@@ -12,6 +13,7 @@ from models import Room, Student
 class DatabaseModel:
 
     __tablename__: str
+    __indexes__: list | None = None
 
     @classmethod
     def connection(cls):
@@ -62,10 +64,21 @@ class DatabaseModel:
         )
 
     @classmethod
+    def create_indexes(cls):
+        if not cls.__indexes__:
+            return
+        for index in cls.__indexes__:
+            sql = (
+                f'CREATE INDEX idx_{cls.__tablename__}_{index} '
+                f'ON {cls.__tablename__}({index});'
+            )
+        cls.execute(sql)
+
+    @classmethod
     def create_table(cls):
         sql = cls.get_create_sql()
         cls.execute(sql)
-        cls.create_intexes()
+        cls.create_indexes()
 
     @classmethod
     def execute(cls, sql, args=None):
@@ -76,14 +89,11 @@ class DatabaseModel:
             connection.commit()
             return result
 
-    @classmethod
-    def create_intexes(cls):
-        ...
-
 
 class StudentDB(Student, DatabaseModel):
 
     __tablename__ = 'students'
+    __indexes__ = ['room']
 
     @classmethod
     def get_foreign_key_sql(cls):
@@ -98,6 +108,23 @@ class StudentDB(Student, DatabaseModel):
             sql, (self.id, self.name, self.room, self.birthday, self.sex)
         )
 
+    @classmethod
+    def isert_many(cls, objects: list[Self]):
+        if not objects:
+            return
+        sql = (
+            f'INSERT INTO `{cls.__tablename__}` '
+            '(`id`, `name`, `room`, `birthday`, `sex`) '
+            'VALUES (%s, %s, %s, %s, %s)')
+        data = [
+            (obj.id, obj.name, obj.room, obj.birthday, obj.sex)
+            for obj in objects
+        ]
+        with cls.connection() as connection:
+            with connection.cursor() as cursor:
+                cursor.executemany(sql, data)
+            connection.commit()
+
 
 class RoomDB(Room, DatabaseModel):
 
@@ -111,9 +138,18 @@ class RoomDB(Room, DatabaseModel):
         self.execute(sql, (self.id, self.name))
 
     @classmethod
-    def create_indexes(cls):
-        sql = 'CREATE INDEX idx_students_room ON students(room);'
-        cls.execute(sql)
+    def isert_many(cls, objects: list[Self]):
+        if not objects:
+            return
+        sql = (
+            f'INSERT INTO `{cls.__tablename__}` '
+            '(`id`, `name`) VALUES (%s, %s)'
+        )
+        data = [(obj.id, obj.name) for obj in objects]
+        with cls.connection() as connection:
+            with connection.cursor() as cursor:
+                cursor.executemany(sql, data)
+            connection.commit()
 
     @classmethod
     def get_student_num_list(cls):
@@ -162,7 +198,7 @@ class RoomDB(Room, DatabaseModel):
         return [cls(**r) for r in res if r.pop('age_dif')]
 
     @classmethod
-    def get_list_of_rooms_where_students_of_different_sexes_live_together(cls):
+    def get_list_of_rooms_with_different_sexes(cls):
         """ List of rooms where students of different sexes live together."""
         sql = '''
         SELECT rooms.*
