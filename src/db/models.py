@@ -7,7 +7,11 @@ from .base import DatabaseModel
 class StudentDB(Student, DatabaseModel):
 
     __tablename__ = 'students'
-    __indexes__ = ['room']
+    __indexes__ = [
+        'room',
+        ('room', 'birthday'),
+        ('room', 'sex'),
+    ]
 
     @classmethod
     def get_foreign_key_sql(cls):

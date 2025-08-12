@@ -21,7 +21,6 @@ class MySQLConfig(ConnectionConfig):
     cursorclass: Type = pymysql.cursors.DictCursor
 
     def to_dict(self):
-        # This custom method is needed to include the child's field
         d = super().to_dict()
         d['cursorclass'] = self.cursorclass
         return d

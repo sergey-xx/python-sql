@@ -8,7 +8,7 @@ from .manager import DBManager
 class DatabaseModel:
 
     __tablename__: str
-    __indexes__: list | None = None
+    __indexes__: list[str | list | tuple] | None = None
     _db_manager_class = DBManager
 
     @classmethod
@@ -57,11 +57,18 @@ class DatabaseModel:
         if not cls.__indexes__:
             return
         for index in cls.__indexes__:
-            sql = (
-                f'CREATE INDEX idx_{cls.__tablename__}_{index} '
-                f'ON {cls.__tablename__}({index});'
-            )
-        cls.execute(sql)
+            if isinstance(index, (list, tuple)):
+                index_name = f'idx_{cls.__tablename__}_{"".join(index)}'
+                sql = (
+                    f'CREATE INDEX {index_name} '
+                    f'ON {cls.__tablename__}({", ".join(index)});'
+                )
+            else:
+                sql = (
+                    f'CREATE INDEX idx_{cls.__tablename__}_{index} '
+                    f'ON {cls.__tablename__}({index});'
+                )
+            cls.execute(sql)
 
     @classmethod
     def create_table(cls):
